@@ -39,6 +39,9 @@ jobs:
       - name: Format Check
         run: pnpm format:check
 
+      - name: Generate Next.js Types
+        run: pnpm exec next typegen
+
       - name: Type Check
         run: pnpm exec tsc --noEmit
 
