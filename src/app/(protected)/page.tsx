@@ -1,5 +1,5 @@
-const Home = () => {
-  return <h1>Hello World</h1>;
-};
+import { HomeView } from "@/features/home/view";
 
-export default Home;
+export default function Home() {
+  return <HomeView />;
+}

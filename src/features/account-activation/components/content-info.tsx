@@ -1,6 +1,8 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTimer } from "react-timer-hook";
+import { useEffect } from "react";
 
 type ContentInfoProps = {
   email: string;
@@ -13,24 +15,26 @@ export const ContentInfo = ({ email, expiresAt }: ContentInfoProps) => {
     autoStart: true,
   });
 
-  if (totalSeconds <= 0) {
-    return null;
-  }
+  const router = useRouter();
 
-  const className = "block text-foreground/75 text-[13px]";
+  useEffect(() => {
+    if (totalSeconds <= 0) {
+      router.push("/sign-in");
+    }
+  }, [totalSeconds, router]);
 
   return (
-    <div className="space-y-1 mb-3">
-      <span className={className}>
-        Código enviado para <strong>{email}</strong>
-      </span>
-      <span className={className}>
+    <div className="space-y-1">
+      <p className="text-sm text-muted-foreground">
+        Código enviado para <strong className="text-foreground">{email}</strong>
+      </p>
+      <p className="text-sm text-muted-foreground">
         O código expira em{" "}
-        <strong>
+        <strong className="text-foreground">
           {hours > 0 && `${hours}h `}
           {minutes}m {String(seconds).padStart(2, "0")}s
         </strong>
-      </span>
+      </p>
     </div>
   );
 };

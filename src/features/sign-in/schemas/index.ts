@@ -1,5 +1,12 @@
 import { z } from "zod";
 
+export const googleSignInSchema = z.object({
+  code: z
+    .string()
+    .min(1, { message: "Informe o code do google" })
+    .max(2048, { message: "O code do google pode ter no máximo 2048 caracteres" }),
+});
+
 export const signInSchema = z.object({
   email: z
     .string()

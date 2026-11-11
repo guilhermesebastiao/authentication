@@ -1,20 +1,11 @@
-import { ApiBodyError, ApiFieldError } from "@/shared/types/api";
-import { ApiErrorCode } from "@/shared/types/api-error-codes";
-
-export type HttpApiError =
-  | (ApiBodyError<ApiFieldError[]> & {
-      code: ApiErrorCode.VALIDATION_ERROR;
-    })
-  | (ApiBodyError<null> & {
-      code: Exclude<ApiErrorCode, ApiErrorCode.VALIDATION_ERROR>;
-    });
+import { ApiErrorBody } from "@/shared/types/api";
 
 export class HttpError extends Error {
   constructor(
     public readonly status: number,
-    public readonly data: HttpApiError,
+    public readonly data: ApiErrorBody,
   ) {
-    super(data.code);
+    super(data.message);
     this.name = "HttpError";
   }
 }

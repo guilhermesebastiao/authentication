@@ -1,6 +1,7 @@
 "use client";
 
 import { useGetAccountActivation } from "@/features/account-activation/hooks/use-get-account-activation";
+import { ErrorComponent } from "@/features/account-activation/components/error-component";
 import { Content } from "@/features/account-activation/components/content";
 import { AsyncBoundary } from "@/shared/components/async-boundary";
 
@@ -9,10 +10,10 @@ type AccountActivationViewProps = {
 };
 
 export const AccountActivationView = ({ activationToken }: AccountActivationViewProps) => {
-  const { data, isLoading, error } = useGetAccountActivation({ activationToken });
+  const { getAccountActivation } = useGetAccountActivation({ activationToken });
 
   return (
-    <AsyncBoundary data={data} isLoading={isLoading} error={error?.data}>
+    <AsyncBoundary query={getAccountActivation} errorComponent={ErrorComponent}>
       {(data) => <Content data={data} />}
     </AsyncBoundary>
   );

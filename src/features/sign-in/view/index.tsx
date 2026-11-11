@@ -1,9 +1,12 @@
 "use client";
 
-import { Field, FieldError, FieldGroup, FieldLabel } from "@/shared/components/ui/field";
-import { useGoogleSignIn } from "@/features/sign-in/hooks/use-google-login";
+import { Field, FieldError, FieldGroup, FieldLabel, FieldSet } from "@/shared/components/ui/field";
+import { AccountActivationResponse } from "@/features/account-activation/types";
+import { useGoogle } from "@/features/sign-in/hooks/use-google-sign-in";
 import { InputPassword } from "@/shared/components/input-password";
+import { PublicHeader } from "@/shared/components/public-header";
 import { useSignIn } from "@/features/sign-in/hooks/use-sign-in";
+import { ApiErrorCode } from "@/shared/types/api-error-codes";
 import { Separator } from "@/shared/components/ui/separator";
 import { InputEmail } from "@/shared/components/input-email";
 import { GoogleIcon } from "@/shared/components/google-icon";
@@ -14,18 +17,11 @@ import { Button } from "@/shared/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import { useRouter } from "next/navigation";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/shared/components/ui/card";
+import Link from "next/link";
 
 export const SignInView = () => {
-  const { googleLogin } = useGoogleSignIn();
-  const { signIn, googleSignIn } = useSignIn();
+  const { google, googleSignIn } = useGoogle();
+  const { signIn } = useSignIn();
 
   const router = useRouter();
 
@@ -39,98 +35,97 @@ export const SignInView = () => {
   });
 
   const onSubmit = (body: SignInRequest) => {
-    signIn.mutate({ body, form });
+    signIn.mutate(
+      { body, form },
+      {
+        onError: ({ data }) => {
+          if (data.code === ApiErrorCode.ACCOUNT_NOT_ACTIVATED) {
+            const { activationToken } = data.details as AccountActivationResponse;
+            router.push(`/account-activation/${activationToken}`);
+          }
+        },
+      },
+    );
   };
 
   return (
-    <Card className="sm:max-w-xl not-sm:ring-0 not-sm:px-1 w-full mx-auto my-auto">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">Entrar</CardTitle>
-        <CardDescription>Faça login para acessar sua conta, ou entre com o Google.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form id="sign-in-form" onSubmit={form.handleSubmit(onSubmit)}>
-          <fieldset disabled={signIn.isPending || googleSignIn.isPending}>
-            <FieldGroup>
-              <Controller
-                name="email"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="sign-in-form-email">E-mail</FieldLabel>
-                    <InputEmail
-                      {...field}
-                      id="sign-in-form-email"
-                      placeholder="Informe seu e-mail"
-                      autoComplete="off"
-                    />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                  </Field>
-                )}
-              />
-              <Controller
-                name="password"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <FieldLabel htmlFor="sign-in-form-password">Senha</FieldLabel>
-                    <InputPassword
-                      {...field}
-                      id="sign-in-form-password"
-                      placeholder="Informe sua senha"
-                      autoComplete="off"
-                    />
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                  </Field>
-                )}
-              />
-            </FieldGroup>
-            <Button
-              variant="link"
-              className="mr-0 mt-3 text-foreground/75"
-              type="button"
-              onClick={() => router.push("/password-recovery/forgot")}
-            >
-              Esqueci minha senha
-            </Button>
-            <div className="flex justify-center items-center gap-2">
-              <Separator />
-              <span className="text-[13px] font-medium text-foreground/60">OU</span>
-              <Separator />
-            </div>
-            <div className="space-y-3 mt-5">
-              <div className="space-y-2 flex justify-center">
-                <Button variant="outline" className="w-full" type="button" onClick={googleLogin}>
-                  {googleSignIn.isPending ? <Spinner /> : <GoogleIcon className="size-4.25" />}
-                  <span>Entrar com Google</span>
-                </Button>
-              </div>
-              <div className="flex items-center justify-center gap-1">
-                <span className="text-foreground/70">Não tem uma conta?</span>
-                <Button
-                  variant="link"
-                  className="text-foreground px-0"
-                  type="button"
-                  onClick={() => router.push("/sign-up")}
-                >
-                  Cadastre-se
-                </Button>
-              </div>
-            </div>
-          </fieldset>
-        </form>
-      </CardContent>
-      <CardFooter className="not-sm:bg-transparent not-sm:border-t-0">
+    <form
+      id="sign-in-form"
+      className="max-w-xl w-full h-min overflow-hidden rounded-lg mx-auto my-auto p-5 min-[578px]:bg-neutral-900 min-[578px]:border"
+      onSubmit={form.handleSubmit(onSubmit)}
+    >
+      <FieldSet disabled={signIn.isPending || googleSignIn.isPending}>
+        <PublicHeader
+          title="Entrar"
+          description="Entre com suas credenciais ou com o Google para acessar sua conta com segurança."
+        />
+        <FieldGroup>
+          <Controller
+            name="email"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="sign-in-form-email">E-mail</FieldLabel>
+                <InputEmail
+                  {...field}
+                  id="sign-in-form-email"
+                  placeholder="Informe seu e-mail"
+                  autoComplete="off"
+                />
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
+          <Controller
+            name="password"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid}>
+                <FieldLabel htmlFor="sign-in-form-password">Senha</FieldLabel>
+                <InputPassword
+                  {...field}
+                  id="sign-in-form-password"
+                  placeholder="Informe sua senha"
+                  autoComplete="off"
+                />
+                {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+              </Field>
+            )}
+          />
+        </FieldGroup>
         <Button
-          form="sign-in-form"
-          type="submit"
-          className="w-full"
-          disabled={signIn.isPending || googleSignIn.isPending}
+          variant="link"
+          className="text-foreground"
+          type="button"
+          onClick={() => router.push("/forgot-password")}
         >
-          {signIn.isPending && <Spinner />}
-          <span>Entrar</span>
+          Esqueci minha senha
         </Button>
-      </CardFooter>
-    </Card>
+        <Button form="sign-in-form" type="submit" className="w-full">
+          {signIn.isPending && <Spinner />}
+          Entrar
+        </Button>
+        <div className="flex justify-center items-center gap-2">
+          <Separator />
+          <span className="text-sm text-muted-foreground">OU</span>
+          <Separator />
+        </div>
+        <div className="flex flex-col justify-center gap-3">
+          <Button variant="outline" className="w-full" type="button" onClick={google}>
+            {googleSignIn.isPending ? <Spinner /> : <GoogleIcon className="size-4.25" />}
+            Entrar com Google
+          </Button>
+          <div className="flex items-center justify-center mt-2 gap-1">
+            <span className="text-sm">Não tem uma conta?</span>
+            <Link
+              className="text-foreground text-sm hover:underline underline-offset-4"
+              href="/sign-up"
+            >
+              Cadastre-se
+            </Link>
+          </div>
+        </div>
+      </FieldSet>
+    </form>
   );
 };

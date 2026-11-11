@@ -1,8 +1,9 @@
 import { AccountActivationResponse } from "@/features/account-activation/types";
 import { HttpError } from "@/shared/lib/http/http-error";
-import { httpFetch } from "@/shared/lib/http/http";
+import { REQUEST_TIMEOUT } from "@/shared/constants";
 import { useQuery } from "@tanstack/react-query";
 import { queryKeys } from "@/shared/lib/keys";
+import { env } from "@/shared/config/env";
 
 type QueryProps = {
   activationToken: string;
@@ -12,16 +13,29 @@ export const useGetAccountActivation = ({ activationToken }: QueryProps) => {
   const getAccountActivation = useQuery<AccountActivationResponse, HttpError>({
     queryKey: [queryKeys.GET_ACCOUNT_ACTIVATION, activationToken],
     queryFn: async () => {
-      return await httpFetch<AccountActivationResponse>({
-        baseURL: window.location.origin,
-        path: "/api/account-activation/:activationToken",
-        paths: { activationToken },
+      const response = await fetch(`${env.BASE_URL}/api/account-activation/${activationToken}`, {
         method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT),
       });
+
+      if (response.status === 204) {
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new HttpError(response.status, data);
+      }
+
+      return data;
     },
     enabled: Boolean(activationToken),
-    retry: false,
   });
 
-  return getAccountActivation;
+  return { getAccountActivation };
 };

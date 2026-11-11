@@ -1,3 +1,9 @@
+import { z } from "zod";
+import {
+  accountActivationSchema,
+  resendAccountActivationSchema,
+} from "@/features/account-activation/schemas";
+
 export type AccountActivationResponse = {
   email: string;
   activationToken: string;
@@ -5,11 +11,6 @@ export type AccountActivationResponse = {
   resendAvailableAt: string;
 };
 
-export type AccountActivationRequest = {
-  activationToken: string;
-  otpCode: string;
-};
+export type AccountActivationRequest = z.infer<typeof accountActivationSchema>;
 
-export type ResendEmailRequest = {
-  activationToken: string;
-};
+export type ResendAccountActivationRequest = z.infer<typeof resendAccountActivationSchema>;
