@@ -1,31 +1,23 @@
 import { useAccountActivation } from "@/features/account-activation/hooks/use-account-activation";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/shared/components/ui/input-otp";
+import { Field, FieldError, FieldGroup, FieldSet } from "@/shared/components/ui/field";
+import { ContentInfo } from "@/features/account-activation/components/content-info";
+import { ResendAccountActivationEmail } from "@/features/account-activation/components/resend-account-activation-email";
 import { accountActivationSchema } from "@/features/account-activation/schemas";
-import { Field, FieldError, FieldGroup } from "@/shared/components/ui/field";
+import { OTP_SIZE } from "@/features/account-activation/constants";
 import { Spinner } from "@/shared/components/ui/spinner";
 import { Button } from "@/shared/components/ui/button";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Controller, useForm } from "react-hook-form";
 import {
-  Card,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardContent,
-  CardFooter,
-} from "@/shared/components/ui/card";
-import {
   AccountActivationRequest,
   AccountActivationResponse,
 } from "@/features/account-activation/types";
-import { ContentInfo } from "@/features/account-activation/components/content-info";
-import { ResendEmail } from "@/features/account-activation/components/resend-email";
+import { PublicHeader } from "@/shared/components/public-header";
 
 type ContentProps = {
   data: AccountActivationResponse;
 };
-
-const OTP_SIZE = 6;
 
 export const Content = ({ data }: ContentProps) => {
   const { accountActivation } = useAccountActivation();
@@ -34,7 +26,7 @@ export const Content = ({ data }: ContentProps) => {
     resolver: zodResolver(accountActivationSchema),
     defaultValues: {
       activationToken: data.activationToken,
-      otpCode: "",
+      otp: "",
     },
   });
 
@@ -43,51 +35,46 @@ export const Content = ({ data }: ContentProps) => {
   };
 
   return (
-    <Card className="sm:max-w-xl not-sm:ring-0 not-sm:px-1 w-full mx-auto my-auto">
-      <CardHeader>
-        <CardTitle className="text-xl font-semibold">Verifique seu e-mail</CardTitle>
-        <CardDescription>Digite o código enviado para o seu e-mail.</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <form
+      id="account-activation-form"
+      className="max-w-xl w-full h-min overflow-hidden rounded-lg p-5 mx-auto my-auto min-[578px]:bg-neutral-900 min-[578px]:border"
+      onSubmit={form.handleSubmit(onSubmit)}
+    >
+      <FieldSet disabled={accountActivation.isPending}>
+        <PublicHeader
+          title="Verifique seu e-mail"
+          description="Digite o código de verificação enviado para seu e-mail para ativar sua conta."
+        />
         <ContentInfo email={data.email} expiresAt={data.expiresAt} />
-        <form id="account-activation-form" onSubmit={form.handleSubmit(onSubmit)}>
-          <fieldset disabled={accountActivation.isPending}>
-            <FieldGroup>
-              <Controller
-                name="otpCode"
-                control={form.control}
-                render={({ field, fieldState }) => (
-                  <Field data-invalid={fieldState.invalid}>
-                    <InputOTP maxLength={OTP_SIZE} {...field}>
-                      <InputOTPGroup>
-                        {Array.from({ length: OTP_SIZE }).map((_, index) => (
-                          <InputOTPSlot key={index} index={index} />
-                        ))}
-                      </InputOTPGroup>
-                    </InputOTP>
-                    {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
-                  </Field>
+        <FieldGroup>
+          <Controller
+            name="otp"
+            control={form.control}
+            render={({ field, fieldState }) => (
+              <Field data-invalid={fieldState.invalid} className="my-2">
+                <InputOTP maxLength={OTP_SIZE} containerClassName="justify-center" {...field}>
+                  <InputOTPGroup>
+                    {Array.from({ length: OTP_SIZE }).map((_, index) => (
+                      <InputOTPSlot key={index} index={index} />
+                    ))}
+                  </InputOTPGroup>
+                </InputOTP>
+                {fieldState.invalid && (
+                  <FieldError className="text-center" errors={[fieldState.error]} />
                 )}
-              />
-            </FieldGroup>
-          </fieldset>
-        </form>
-        <ResendEmail
+              </Field>
+            )}
+          />
+        </FieldGroup>
+        <Button form="account-activation-form" type="submit" className="w-full">
+          {accountActivation.isPending && <Spinner />}
+          Verificar e criar conta
+        </Button>
+        <ResendAccountActivationEmail
           activationToken={data.activationToken}
           resendAvailableAt={data.resendAvailableAt}
         />
-      </CardContent>
-      <CardFooter className="not-sm:bg-transparent not-sm:border-t-0">
-        <Button
-          form="account-activation-form"
-          type="submit"
-          className="w-full"
-          disabled={accountActivation.isPending}
-        >
-          {accountActivation.isPending && <Spinner />}
-          <span>Verificar e criar conta</span>
-        </Button>
-      </CardFooter>
-    </Card>
+      </FieldSet>
+    </form>
   );
 };

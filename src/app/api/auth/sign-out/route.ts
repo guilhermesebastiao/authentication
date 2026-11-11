@@ -1,0 +1,60 @@
+import { handleServerErrors } from "@/shared/utils/handle-server-errors";
+import { deleteAuthCookies } from "@/shared/utils/delete-auth-cookies";
+import { defaultHeaders } from "@/shared/utils/default-headers";
+import { ApiErrorCode } from "@/shared/types/api-error-codes";
+import { HttpError } from "@/shared/lib/http/http-error";
+import { NextRequest, NextResponse } from "next/server";
+import { ApiErrorBody } from "@/shared/types/api";
+import { env } from "@/shared/config/env";
+
+export const POST = async (request: NextRequest) => {
+  try {
+    const api = await fetch(`${env.API_URL}/auth/sign-out`, {
+      method: "POST",
+      headers: defaultHeaders(request),
+    });
+
+    if (api.status === 204) {
+      const response = new NextResponse(null, { status: api.status });
+
+      deleteAuthCookies(response);
+
+      return response;
+    }
+
+    const data = await api.json();
+
+    if (!api.ok) {
+      throw new HttpError(api.status, data);
+    }
+
+    const response = NextResponse.json(data, {
+      status: api.status,
+    });
+
+    deleteAuthCookies(response);
+
+    return response;
+  } catch (error) {
+    if (error instanceof HttpError) {
+      const response = NextResponse.json<ApiErrorBody>(error.data, {
+        status: error.status,
+      });
+
+      return handleServerErrors({ response, error });
+    }
+
+    return NextResponse.json<ApiErrorBody>(
+      {
+        title: "Erro inesperado",
+        message: "Ocorreu um erro inesperado. Tente novamente mais tarde.",
+        status: 500,
+        code: ApiErrorCode.INTERNAL_SERVER_ERROR,
+        details: null,
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+};

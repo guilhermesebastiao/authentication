@@ -3,9 +3,11 @@ import { ComponentProps, forwardRef, useState } from "react";
 import { Button } from "@/shared/components/ui/button";
 import { Eye, EyeOff, Lock } from "lucide-react";
 
+type PasswordType = "password" | "text";
+
 export const InputPassword = forwardRef<HTMLInputElement, ComponentProps<typeof InputGroupInput>>(
   ({ ...props }, ref) => {
-    const [type, setType] = useState("password");
+    const [type, setType] = useState<PasswordType>("password");
 
     const toggleType = () => {
       setType((prevType) => (prevType === "password" ? "text" : "password"));

@@ -1,44 +1,53 @@
 "use client";
 
-import { EmptyComponent } from "@/shared/components/empty-component";
-import { ErrorComponent } from "@/shared/components/error-component";
-import { ApiErrorCode } from "@/shared/types/api-error-codes";
-import { HttpApiError } from "@/shared/lib/http/http-error";
+import { BaseEmpty } from "@/shared/components/base-empty";
+import { BaseError } from "@/shared/components/base-error";
 import { Spinner } from "@/shared/components/ui/spinner";
+import { HttpError } from "@/shared/lib/http/http-error";
+import { UseQueryResult } from "@tanstack/react-query";
 import React from "react";
 
 type AsyncBoundaryProps<T> = {
-  data: T | null | undefined;
-  isLoading?: boolean;
-  error?: HttpApiError | null | undefined;
+  query: UseQueryResult<T, HttpError>;
+  errorComponent?: React.ComponentType<{ error: HttpError; onRefetch?: () => void }>;
+  emptyComponent?: React.ComponentType<{ onRefetch?: () => void }>;
   isEmpty?: (data: T) => boolean;
-  empty?: React.ComponentType;
   children: (data: T) => React.ReactNode;
 };
 
 export function AsyncBoundary<T>({
-  data,
-  isLoading,
-  error,
+  query,
+  errorComponent: ErrorComponent,
+  emptyComponent: EmptyComponent,
   isEmpty,
-  empty: Empty,
   children,
 }: AsyncBoundaryProps<T>) {
-  if (isLoading) {
+  if (query.isLoading || query.isRefetching) {
     return <Spinner className="mx-auto my-auto" />;
   }
 
-  if (error && error.code !== ApiErrorCode.VALIDATION_ERROR) {
-    return <ErrorComponent error={error} />;
+  if (query.error) {
+    return ErrorComponent ? (
+      <ErrorComponent error={query.error} onRefetch={() => query.refetch()} />
+    ) : (
+      <BaseError error={query.error} />
+    );
   }
 
-  if (!data) {
+  if (!query.isSuccess) {
     return null;
   }
 
-  if (isEmpty?.(data)) {
-    return Empty ? <Empty /> : <EmptyComponent />;
+  if (isEmpty?.(query.data)) {
+    return EmptyComponent ? (
+      <EmptyComponent onRefetch={() => query.refetch()} />
+    ) : (
+      <BaseEmpty
+        title="Nenhum resultado encontrado"
+        description="Não há informações disponíveis para exibir no momento."
+      />
+    );
   }
 
-  return <React.Fragment>{children(data)}</React.Fragment>;
+  return <React.Fragment>{children(query.data)}</React.Fragment>;
 }

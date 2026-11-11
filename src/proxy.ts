@@ -1,8 +1,10 @@
 import { MiddlewareConfig, NextRequest, NextResponse } from "next/server";
-import { setAuthCookies } from "@/shared/utils/set-auto-cookies";
+import { deleteAuthCookies } from "@/shared/utils/delete-auth-cookies";
+import { setAuthCookies } from "@/shared/utils/set-auth-cookies";
+import { defaultHeaders } from "@/shared/utils/default-headers";
 import { AUTH_TOKENS } from "@/shared/constants/auth-tokens";
-import { SignInResponse } from "@/features/sign-in/types";
-import { httpFetch } from "@/shared/lib/http/http";
+import { AuthResponse } from "@/features/sign-in/types";
+import { env } from "@/shared/config/env";
 import { match } from "path-to-regexp";
 import { decodeJwt } from "jose";
 
@@ -23,15 +25,15 @@ const publicRoutes = [
     redirectWhenAuthenticated: true,
   },
   {
-    path: "/password-recovery/forgot",
+    path: "/forgot-password",
     redirectWhenAuthenticated: true,
   },
   {
-    path: "/password-recovery/verify/:recoverToken",
+    path: "/forgot-password/validate/:forgotToken",
     redirectWhenAuthenticated: true,
   },
   {
-    path: "/password-recovery/reset/:recoverToken",
+    path: "/recovery-password/reset/:recoveryToken",
     redirectWhenAuthenticated: true,
   },
 ];
@@ -40,7 +42,7 @@ export const proxy = async (request: NextRequest) => {
   const publicRoute = publicRoutes.find((route) => match(route.path)(request.nextUrl.pathname));
 
   if (!hasAllAuthTokens(request)) {
-    return publicRoute ? NextResponse.next() : redirectToSignIn(request);
+    return publicRoute ? NextResponse.next() : redirectToSign(request);
   }
 
   if (publicRoute?.redirectWhenAuthenticated) {
@@ -56,16 +58,14 @@ export const proxy = async (request: NextRequest) => {
   const data = await refresh(request);
 
   if (!data) {
-    return redirectToSignIn(request);
+    return redirectToSign(request);
   }
 
   return setAuthCookies(NextResponse.next(), data);
 };
 
 const hasAllAuthTokens = (request: NextRequest) => {
-  return Object.values(AUTH_TOKENS).every((name) => {
-    return Boolean(request.cookies.get(name)?.value);
-  });
+  return Object.values(AUTH_TOKENS).every((name) => Boolean(request.cookies.get(name)?.value));
 };
 
 const isAccessTokenValid = (accessToken: string) => {
@@ -77,35 +77,40 @@ const isAccessTokenValid = (accessToken: string) => {
   }
 };
 
-const redirect = (request: NextRequest, pathname: string) => {
-  const url = request.nextUrl.clone();
-  url.pathname = pathname;
-  return NextResponse.redirect(url);
-};
-
-const redirectToSignIn = (request: NextRequest) => {
+const redirectToSign = (request: NextRequest) => {
   const response = redirect(request, REDIRECT_WHEN_NOT_AUTHENTICATED);
 
-  [...Object.values(AUTH_TOKENS)].forEach((name) => {
-    response.cookies.delete(name);
-  });
+  deleteAuthCookies(response);
 
   return response;
 };
 
-const refresh = async (request: NextRequest): Promise<SignInResponse | null> => {
-  const body = {
-    accessToken: request.cookies.get(AUTH_TOKENS.ACCESS_TOKEN)?.value,
-    refreshToken: request.cookies.get(AUTH_TOKENS.REFRESH_TOKEN)?.value,
-    sessionToken: request.cookies.get(AUTH_TOKENS.SESSION_TOKEN)?.value,
-  };
+const redirect = (request: NextRequest, pathname: string) => {
+  const url = request.nextUrl.clone();
 
+  url.pathname = pathname;
+
+  return NextResponse.redirect(url);
+};
+
+const refresh = async (request: NextRequest): Promise<AuthResponse | null> => {
   try {
-    return await httpFetch<SignInResponse>({
-      baseURL: request.nextUrl.origin,
-      path: "/api/auth/refresh",
-      body,
+    const body = {
+      accessToken: request.cookies.get(AUTH_TOKENS.ACCESS_TOKEN)?.value,
+      refreshToken: request.cookies.get(AUTH_TOKENS.REFRESH_TOKEN)?.value,
+      sessionToken: request.cookies.get(AUTH_TOKENS.SESSION_TOKEN)?.value,
+    };
+
+    const api = await fetch(`${env.API_URL}/auth/refresh`, {
+      method: "POST",
+      headers: defaultHeaders(request),
+      body: JSON.stringify(body),
+      cache: "no-store",
     });
+
+    if (!api.ok) return null;
+
+    return await api.json();
   } catch {
     return null;
   }

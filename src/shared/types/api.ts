@@ -1,17 +1,22 @@
-import { ApiErrorCode, ValidationErrorCode } from "@/shared/types/api-error-codes";
+import { ApiErrorCode } from "@/shared/types/api-error-codes";
 
-export type ApiBody<T = null> = {
-  status: "success";
-  data: T;
+export type ApiPageBody<T = []> = {
+  results: T[];
+  page: number;
+  size: number;
+  totalItems: number;
+  totalPages: number;
 };
 
-export type ApiBodyError<T = null> = {
-  status: "error";
+export type ApiErrorBody = {
+  title: string;
+  message: string;
+  status: number;
   code: ApiErrorCode;
-  details: T;
+  details: Record<string, unknown> | Record<string, unknown>[] | null;
 };
 
 export type ApiFieldError = {
   field: string;
-  code: ValidationErrorCode;
+  error: string;
 };
